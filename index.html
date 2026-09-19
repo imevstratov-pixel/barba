@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Barba: рабочий пульт в чёлке MacBook</title>
+<meta name="description" content="Barba превращает чёлку MacBook в рабочий пульт: задачи, таймер, встречи, ответы Claude и сообщения Telegram под курсором, без переключения окон.">
+<meta name="theme-color" content="#EDE6D8">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Barba: рабочий пульт в чёлке MacBook">
+<meta property="og:description" content="Задачи, таймер, встречи, ответы Claude и сообщения Telegram в чёлке MacBook. Навёл мышь, сделал, убрал.">
+<meta property="og:image" content="https://imevstratov-pixel.github.io/barba/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Barba в чёлке MacBook">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.png" type="image/png" sizes="64x64">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=0f8f65f">
+<link rel="stylesheet" href="island.css?v=0f8f65f">
+<link rel="stylesheet" href="mascot.css?v=0f8f65f">
+<script src="config.js?v=0f8f65f"></script>
+<script src="demo.js?v=0f8f65f" defer></script>
+<script src="mascot.js?v=0f8f65f" defer></script>
+<script src="main.js?v=0f8f65f" defer></script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-mustache" viewBox="0 0 64 24"><path fill="currentColor" d="M2 15C2 7 9 3 18 3.5C24 4 29 6 32 8.5C35 6 40 4 46 3.5C55 3 62 7 62 15C62 19.5 58.5 21 55 19.5C52 22 47.5 22 45 19.5C42.5 22 38 22 35.5 19.5C34 21 30 21 28.5 19.5C26 22 21.5 22 19 19.5C16.5 22 12 22 9 19.5C5.5 21 2 19.5 2 15Z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M5 3.2v9.6l7.6-4.8z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 16 16"><rect x="4" y="3.5" width="2.8" height="9" rx="1" fill="currentColor"/><rect x="9.2" y="3.5" width="2.8" height="9" rx="1" fill="currentColor"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 16 16"><rect x="4" y="4" width="8" height="8" rx="1.5" fill="currentColor"/></symbol>
+  <symbol id="i-back" viewBox="0 0 16 16"><path d="M8 3.8v8.4L2.4 8zM14 3.8v8.4L8.4 8z" fill="currentColor"/></symbol>
+  <symbol id="i-fwd" viewBox="0 0 16 16"><path d="M8 3.8v8.4L13.6 8zM2 3.8v8.4L7.6 8z" fill="currentColor"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="3.6" cy="4.5" r="1.4"/><circle cx="3.6" cy="11.5" r="1.4"/><path d="M7.5 4.5h6M7.5 11.5h6"/></g></symbol>
+  <symbol id="i-timer" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="9.2" r="5.3"/><path d="M8 9.2V6.4M6.3 1.8h3.4"/></g></symbol>
+  <symbol id="i-cal" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2.4" y="3.4" width="11.2" height="10.2" rx="2.2"/><path d="M2.4 7h11.2M5.4 1.9v3M10.6 1.9v3"/></g></symbol>
+  <symbol id="i-lang" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 2.5h8.4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7.5L4.6 13.8v-2.3h-.8a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z"/><path d="M6.3 9 8 4.6 9.7 9M6.9 7.6h2.2"/></g></symbol>
+  <symbol id="i-spark" viewBox="0 0 16 16"><path d="M8 1.2c.5 3.3 1.9 5.1 5.8 6.8-3.9 1.7-5.3 3.5-5.8 6.8-.5-3.3-1.9-5.1-5.8-6.8 3.9-1.7 5.3-3.5 5.8-6.8z" fill="currentColor"/></symbol>
+  <symbol id="i-plane" viewBox="0 0 16 16"><path d="M14.3 1.9 1.7 7c-.6.3-.6 1.1 0 1.3l3.1 1.2 1.2 3.8c.2.6.9.8 1.3.3l1.8-1.8 3 2.3c.5.4 1.2.1 1.3-.5l1.8-10.7c.1-.7-.5-1.3-.9-1z" fill="currentColor"/></symbol>
+  <symbol id="i-note" viewBox="0 0 16 16"><path d="M6 12.2V3.6l7-1.6v8.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="4.3" cy="12.3" r="2" fill="currentColor"/><circle cx="11.3" cy="10.5" r="2" fill="currentColor"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.4 8.6l3 3 6.2-7.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-up" viewBox="0 0 16 16"><path d="M8 13V3.6M4.4 7.2 8 3.6l3.6 3.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M8 2.4v8M4.4 7 8 10.6 11.6 7M3 13.6h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-video" viewBox="0 0 16 16"><rect x="1.4" y="4" width="9" height="8" rx="2" fill="currentColor"/><path d="M11.2 7.1 14.6 5v6l-3.4-2.1z" fill="currentColor"/></symbol>
+  <symbol id="i-key" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="5" cy="8" r="3"/><path d="M8 8h6.4M12 8v2.4M14.2 8v1.8"/></g></symbol>
+  <symbol id="i-disk" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.8" y="4.2" width="12.4" height="7.6" rx="2"/></g><circle cx="11" cy="8" r="1.1" fill="currentColor"/></symbol>
+  <symbol id="i-person" viewBox="0 0 16 16"><circle cx="8" cy="3" r="1.6" fill="currentColor"/><path d="M3 6.2h10M8 6.2v4M5.4 14 8 10.2 10.6 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5.2" y="5.2" width="8.4" height="8.4" rx="2"/><path d="M10.8 5.2V4a1.6 1.6 0 0 0-1.6-1.6H4a1.6 1.6 0 0 0-1.6 1.6v5.2A1.6 1.6 0 0 0 4 10.8h1.2"/></g></symbol>
+  <symbol id="i-mail" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="1.8" y="3.4" width="12.4" height="9.2" rx="2"/><path d="m2.4 4.4 5.6 4.4 5.6-4.4"/></g></symbol>
+  <symbol id="i-open" viewBox="0 0 16 16"><path d="M6 3H3.6A1.6 1.6 0 0 0 2 4.6v7.8C2 13.3 2.7 14 3.6 14h7.8c.9 0 1.6-.7 1.6-1.6V10M9 2h5v5M14 2 7.5 8.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<header class="topbar" id="topbar">
+  <a class="logo" href="#top" aria-label="Barba, наверх"><img class="logo-mark" src="favicon.png" width="32" height="32" alt=""><span>Barba</span></a>
+  <a class="top-link" href="#download">Скачать</a>
+</header>
+
+<div class="notch" id="notch" data-mode="idle" aria-label="Демо: усы. Наведи мышь или нажми, чтобы раскрыть">
+  <div class="n-hit"></div>
+  <div class="nb">
+    <div class="n-clip">
+      <div class="n-layer n-compact" aria-live="polite"></div>
+      <div class="n-layer n-peek"></div>
+      <div class="n-layer n-island"></div>
+    </div>
+  </div>
+</div>
+
+<main id="top">
+
+  <section class="hero">
+    <div class="hero-pointer" aria-hidden="true">
+      <svg viewBox="0 0 90 84" width="90" height="84"><path d="M45 82C45 60 22 52 33 30C38 20 44 14 45 6" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 6" stroke-linecap="round"/><path d="M38.5 12.5 45 5l6.5 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>вот они, усы</span>
+    </div>
+    <div class="wrap hero-in">
+      <p class="eyebrow">Ранняя версия для&nbsp;MacBook</p>
+      <h1>У&nbsp;твоего Mac есть&nbsp;чёлка. Теперь&nbsp;это&nbsp;усы.</h1>
+      <p class="lead">Barba живёт в&nbsp;вырезе экрана и&nbsp;держит под&nbsp;рукой рабочие мелочи: задачи, таймер, встречи, ответы Claude и&nbsp;сообщения Telegram. Навёл мышь, сделал, убрал.</p>
+      <div class="cta">
+        <button class="btn btn-amber" type="button" data-open-notch><svg class="ic" aria-hidden="true"><use href="#i-up"/></svg><span class="hover-only">Наведи на&nbsp;усы</span><span class="touch-only">Нажми на&nbsp;усы</span></button>
+        <a class="btn btn-ink desktop-only" href="#download">Скачать для&nbsp;Mac</a>
+        <button class="btn btn-ink mobile-only" type="button" data-share>Отправить себе ссылку</button>
+      </div>
+      <p class="mobile-note mobile-only">Barba ставится на&nbsp;Mac. Отправь ссылку себе и&nbsp;открой с&nbsp;ноутбука.</p>
+    </div>
+    <div class="char" data-scene="1" aria-hidden="true"></div>
+  </section>
+
+  <section class="demo" id="demo">
+    <div class="wrap demo-grid">
+      <div class="demo-copy">
+        <h2>Попробуй, не&nbsp;устанавливая</h2>
+        <p class="sub">Усы вверху этой страницы работают как&nbsp;настоящие. Раскрой их&nbsp;и&nbsp;выполни три задания.</p>
+        <ol class="tries">
+          <li data-try="task"><span class="tick" aria-hidden="true"><svg><use href="#i-check"/></svg></span><div><b>Запиши задачу</b><span>Допиши в&nbsp;конце «45м», и&nbsp;время запишется само.</span></div></li>
+          <li data-try="timer"><span class="tick" aria-hidden="true"><svg><use href="#i-check"/></svg></span><div><b>Засеки время</b><span>Во&nbsp;вкладке «Время» нажми «Старт» и&nbsp;убери мышь: таймер останется в&nbsp;усах.</span></div></li>
+          <li data-try="claude"><span class="tick" aria-hidden="true"><svg><use href="#i-check"/></svg></span><div><b>Загляни к&nbsp;Claude</b><span>Там лимиты и&nbsp;сессии, которые ждут ответа.</span></div></li>
+        </ol>
+        <div class="demo-cta"><button class="btn btn-amber" type="button" data-open-notch>Раскрыть усы</button><div class="char" data-scene="2" aria-hidden="true"></div></div>
+        <p class="tries-done" hidden>Готово. Так выглядит обычный день с&nbsp;Barba. <a href="#download">Скачать</a></p>
+      </div>
+      <div class="preview" aria-hidden="true">
+        <div class="preview-screen"><div class="preview-island" id="preview"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="wrap">
+      <div class="sec-head"><div><h2>Что&nbsp;возьму на&nbsp;себя</h2>
+        <p class="sub">Шесть мелочей, ради&nbsp;которых обычно переключаешь окна. <span class="hover-only">Наведи на&nbsp;карточку и&nbsp;посмотри на&nbsp;усы.</span></p></div><div class="char" data-scene="3" aria-hidden="true"></div></div>
+      <div class="cards">
+        <article class="card" data-state="task"><span class="card-ic"><svg><use href="#i-list"/></svg></span><h3>Запишу задачу, пока мысль не&nbsp;ушла</h3><p>⌥&nbsp;Space, пара слов, Enter. Окна переключать не&nbsp;надо</p></article>
+        <article class="card" data-state="timer"><span class="card-ic"><svg><use href="#i-timer"/></svg></span><h3>Засеку время</h3><p>Сам встану на&nbsp;паузу, когда отойдёшь, и&nbsp;продолжу, когда вернёшься</p></article>
+        <article class="card" data-state="meeting"><span class="card-ic"><svg><use href="#i-cal"/></svg></span><h3>Напомню о&nbsp;встрече</h3><p>За&nbsp;десять минут и&nbsp;с&nbsp;кнопкой «Подключиться»</p></article>
+        <article class="card" data-state="claude"><span class="card-ic"><svg><use href="#i-spark"/></svg></span><h3>Скажу, что&nbsp;Claude ответил</h3><p>И&nbsp;сколько осталось лимита до&nbsp;сброса</p></article>
+        <article class="card" data-state="tg"><span class="card-ic"><svg><use href="#i-plane"/></svg></span><h3>Покажу сообщение из&nbsp;Telegram</h3><p>От&nbsp;кого и&nbsp;о&nbsp;чём, не&nbsp;открывая Telegram</p></article>
+        <article class="card" data-state="tr"><span class="card-ic"><svg><use href="#i-lang"/></svg></span><h3>Переведу слово или&nbsp;фразу</h3><p>Прямо на&nbsp;Mac, без&nbsp;интернета</p></article>
+      </div>
+      <p class="aside"><svg class="ic" aria-hidden="true"><use href="#i-note"/></svg>А&nbsp;ещё переключу трек в&nbsp;любом плеере.</p>
+    </div>
+  </section>
+
+  <section class="events">
+    <div class="wrap">
+      <div class="sec-head"><h2>Шевельну усами, только когда есть&nbsp;повод</h2><div class="char" data-scene="events" aria-hidden="true"></div></div>
+      <div class="minis" id="minis">
+        <figure class="mini" data-mini="tg"><div class="mini-screen"><div class="mini-notch"></div></div><figcaption>сообщение</figcaption></figure>
+        <figure class="mini" data-mini="claude"><div class="mini-screen"><div class="mini-notch"></div></div><figcaption>ответ Claude</figcaption></figure>
+        <figure class="mini" data-mini="meeting"><div class="mini-screen"><div class="mini-notch"></div></div><figcaption>встреча</figcaption></figure>
+        <figure class="mini" data-mini="limit"><div class="mini-screen"><div class="mini-notch"></div></div><figcaption>лимит обновился</figcaption></figure>
+      </div>
+      <p class="sub center">Никаких баннеров и&nbsp;звуков. Усы чуть вырастут, покажут главное и&nbsp;через&nbsp;шесть секунд свернутся.</p>
+      <p class="nonotch"><span class="menubar-mini" aria-hidden="true"><i></i></span><span>Внешний монитор или&nbsp;Mac без&nbsp;выреза? Усы поселятся в&nbsp;центре <span class="nw">меню-бара</span>.</span></p>
+    </div>
+  </section>
+
+  <section class="perms" id="privacy">
+    <div class="wrap">
+      <div class="sec-head"><h2>Да, я&nbsp;прошу много разрешений. Вот&nbsp;зачем</h2><div class="char" data-scene="4" aria-hidden="true"></div></div>
+      <div class="perm-head" aria-hidden="true"><span></span><span>Разрешение</span><span>Зачем</span><span>Что&nbsp;с&nbsp;данными</span></div>
+      <div class="perm-list">
+        <div class="perm"><span class="perm-ic"><svg><use href="#i-cal"/></svg></span><h3>Календарь</h3><p>Показать встречи и&nbsp;кнопку подключения</p><p class="data">События никуда не&nbsp;уходят</p></div>
+        <div class="perm"><span class="perm-ic"><svg><use href="#i-disk"/></svg></span><h3>Полный доступ к&nbsp;диску</h3><p>Сообщения Telegram лежат в&nbsp;базе уведомлений macOS, другого пути к&nbsp;ним нет</p><p class="data">Читаю копию базы и&nbsp;только Telegram</p></div>
+        <div class="perm"><span class="perm-ic"><svg><use href="#i-person"/></svg></span><h3>Универсальный доступ</h3><p>Чтобы клик открывал нужный чат в&nbsp;приложении Claude</p><p class="data">Нажимаю одну строку в&nbsp;чужом окне, больше ничего</p></div>
+        <div class="perm"><span class="perm-ic"><svg><use href="#i-key"/></svg></span><h3>Keychain</h3><p>Узнать остаток лимита Claude</p><p class="data">Ключ живёт только в&nbsp;памяти, чаты не&nbsp;читаю</p></div>
+      </div>
+      <p class="note">Любое разрешение можно не&nbsp;давать: вкладка просто останется пустой, остальное работает. Задачи, время и&nbsp;заметки лежат только на&nbsp;твоём Mac. <span id="netText">В&nbsp;сеть приложение ходит только за&nbsp;лимитами Claude, и&nbsp;только если ты&nbsp;это включил.</span></p>
+    </div>
+  </section>
+
+  <section class="author">
+    <div class="wrap">
+      <div class="author-card">
+        <img class="avatar" src="assets/author.jpg" width="84" height="84" alt="Данил, автор Barba">
+        <div class="author-text">
+          <p class="quote">Меня зовут Данил, и&nbsp;я&nbsp;занимаюсь образованием, а&nbsp;ещё вайбкожу для&nbsp;себя. Barba я&nbsp;собрал под&nbsp;свои задачи с&nbsp;Клодом: устал переключать окна ради&nbsp;мелочей.</p>
+          <p>Это ранняя версия: <span class="nw">что-то</span> может шевелиться не&nbsp;так. Расскажи, что&nbsp;мешает и&nbsp;чего не&nbsp;хватает, форма займёт семь минут.</p>
+          <div class="cta">
+            <a class="btn btn-amber" data-feedback target="_blank" rel="noopener">Оставить отзыв</a>
+            <a class="btn btn-ghost" data-linkedin target="_blank" rel="noopener">Написать в&nbsp;LinkedIn</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="download" id="download">
+    <div class="wrap center">
+      <div class="dl-mark char" data-scene="6" aria-hidden="true"><svg class="dl-fallback"><use href="#i-mustache"/></svg></div>
+      <h2>Скачать Barba для&nbsp;Mac</h2>
+      <p class="meta" id="dlMeta">Бесплатно. macOS 15&nbsp;и&nbsp;новее, Apple&nbsp;Silicon и&nbsp;Intel.</p>
+      <a class="btn btn-ink btn-lg desktop-only" id="dlBtn" href="#download"><svg class="ic" aria-hidden="true"><use href="#i-down"/></svg>Скачать</a>
+      <div class="share mobile-only">
+        <p class="mobile-note">Barba ставится на&nbsp;Mac. Отправь ссылку себе и&nbsp;открой с&nbsp;ноутбука.</p>
+        <button class="btn btn-ink btn-lg" type="button" data-share>Отправить себе ссылку</button>
+        <div class="share-row">
+          <button class="chip" type="button" data-copy><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg><span>Скопировать</span></button>
+          <a class="chip" data-tg target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-plane"/></svg>Telegram</a>
+          <a class="chip" data-mail><svg class="ic" aria-hidden="true"><use href="#i-mail"/></svg>Почта</a>
+        </div>
+      </div>
+      <ol class="next-steps" id="nextSteps" hidden>
+        <li><b>Открой скачанный&nbsp;файл</b><span>Он&nbsp;в&nbsp;«Загрузках» и&nbsp;называется&nbsp;Barba.</span></li>
+        <li><b>Перетащи Barba в&nbsp;«Программы»</b><span>Оттуда приложение сможет&nbsp;обновляться.</span></li>
+        <li><b>Запусти</b><span>Дальше проведу сам.</span></li>
+        <li data-unsigned><b>Если macOS не&nbsp;пускает</b><span>Закрой предупреждение, открой «Системные настройки → Конфиденциальность и&nbsp;безопасность» и&nbsp;внизу нажми <span class="nw">«Всё равно открыть»</span>. Apple эту раннюю версию ещё не&nbsp;проверяла.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="faq">
+    <div class="wrap narrow">
+      <h2>Коротко о&nbsp;важном</h2>
+      <details><summary>У&nbsp;меня Mac без&nbsp;выреза или&nbsp;внешний монитор</summary><p>Усы поселятся в&nbsp;центре <span class="nw">меню-бара</span> и&nbsp;работают так&nbsp;же. Если мешают, показ на&nbsp;экранах без&nbsp;выреза выключается в&nbsp;настройках.</p></details>
+      <details><summary>Не&nbsp;съедят батарею?</summary><p>В&nbsp;свёрнутом виде усы почти спят и&nbsp;оживают только на&nbsp;событие. Раз в&nbsp;секунду они тикают, только пока идёт таймер.</p></details>
+      <details><summary>Как&nbsp;удалить, если не&nbsp;зайдёт?</summary><p>Выйди из&nbsp;Barba через&nbsp;значок в&nbsp;<span class="nw">меню-баре</span> и&nbsp;перетащи приложение из&nbsp;«Программ» в&nbsp;корзину. Задачи и&nbsp;записи времени лежат в&nbsp;папке ~/Library/Application Support/NotchIsland, её&nbsp;можно удалить отдельно.</p></details>
+      <details><summary>Будет версия для&nbsp;Windows?</summary><p>Пока нет. Barba живёт в&nbsp;чёлке MacBook и&nbsp;держится на&nbsp;системных функциях&nbsp;macOS.</p></details>
+      <details><summary>Почему бесплатно?</summary><p>Это ранняя версия: сейчас важнее понять, чем&nbsp;Barba помогает в&nbsp;работе. Лучшая плата&nbsp;— отзыв на&nbsp;семь минут.</p></details>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <span class="foot-name"><span class="char" data-scene="7" aria-hidden="true"></span>Barba <span id="footVersion"></span></span>
+    <a id="footReleases" target="_blank" rel="noopener">Что&nbsp;нового</a>
+    <a data-feedback target="_blank" rel="noopener">Оставить отзыв</a>
+    <span class="foot-copy">© 2026&nbsp;Даниил Евстратов. Программа предоставляется как&nbsp;есть.</span>
+  </div>
+</footer>
+
+</body>
+</html>
