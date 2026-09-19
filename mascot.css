@@ -1,0 +1,406 @@
+/* Barba mascot — позы, переходы и живость.
+ *
+ * Как устроено. Все детали — группы SVG с классами. Позицию каждой детали задаёт
+ * обёртка с атрибутом transform, а CSS двигает саму группу вокруг её (0,0):
+ *   .m-left/.m-right  половинки усов, шарнир — верхняя ложбинка между ними
+ *   .tip-l/.tip-r     кончики-«руки», шарнир — тупой конец половинки
+ *   .eye-l/.eye-r     глаза, (0,0) — центр глаза. Внутри: .eye-socket — лунка цвета фона
+ *                     в кромке усов, .eye-ball — точка, которая ходит в лунке;
+ *                     .lid-l/.lid-r — веки цвета фона
+ *   .brow-l/.brow-r   брови, (0,0) — центр брови;  .fx-*   мелочи
+ * Правая сторона — зеркало левой (обёртка scale(-1 1)), поэтому значения поз
+ * «зеркальные»: плюс значит одно и то же для обеих сторон.
+ *
+ * Поза = набор переменных --bm-* на корне .barba-m.is-<поза>. Общее значение (--bm-m)
+ * действует на обе стороны, --bm-m-l / --bm-m-r переопределяют одну. Префикс --bm-
+ * нужен, чтобы переменные страницы (--t, --open…) не протекали в маскота.
+ *   --bm-m             поворот половинки, deg (+ = внешний конец вверх)
+ *   --bm-t, --bm-ts    поворот (deg, + = вверх) и масштаб кончика
+ *   --bm-curl --bm-point --bm-droop   какая форма кончика видна (0 или 1)
+ *   --bm-ex --bm-ey --bm-es           сдвиг глаза целиком (px, x по экрану) и масштаб
+ *   --bm-px --bm-py                   куда смотрит точка: сдвиг внутри лунки (px, x по экрану)
+ *   --bm-psy                          сплющить точку сверху (0..1): «прижата к верхнему краю»
+ *   --bm-pr                           масштаб зрачка (только тёмная тема)
+ *   --bm-open --bm-happy --bm-sleep   какой глаз виден (0 или 1): точка, ^ или ‿
+ *   --bm-lid --bm-lida --bm-lido      веко: положение нижнего края (px от центра глаза),
+ *                                     наклон (deg, + = внутренний угол ниже), видимость
+ *   --bm-bx --bm-by --bm-ba           бровь: к центру (px), вниз (px), наклон (deg, + = хмурится)
+ *   --bm-rx --bm-ry --bm-rr --bm-rs   вся фигура: сдвиг, наклон, масштаб
+ *   --bm-sy                           усы целиком вниз (px)
+ *   --bm-breath                       глубина дыхания (1 — обычная)
+ *   --bm-gx --bm-gy                   взгляд -1..1, ставит controller.look()
+ */
+
+@property --bm-breath { syntax: '<number>'; inherits: true; initial-value: 1; }
+
+.barba-m {
+  --barba-t: 320ms;
+  --barba-t-slow: 420ms;
+  --barba-t-fade: 120ms;
+  --barba-t-shut: 90ms;                            /* смена формы глаза: закрыть… */
+  --barba-t-open: 200ms;                           /* …и открыть новой формой */
+  --barba-ease: cubic-bezier(.3, 1.32, .55, 1);   /* мягкий выход с лёгким перелётом */
+  --barba-ease-out: cubic-bezier(.22, .8, .3, 1);
+  --bm-breath: 1;
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  fill: currentColor;
+  transition: --bm-breath 1.2s ease-in-out;        /* глубина дыхания меняется плавно, без скачка */
+}
+.barba-m * { transform-box: view-box; transform-origin: 0 0; }
+
+/* цвет и фон. В тёмной теме фон задаётся только через --mascot-bg-dark */
+.barba-m.is-dark { color: var(--mascot-ink-dark, #FBF8F2); --mascot-bg: var(--mascot-bg-dark, #000); }
+.barba-m .halo { stroke: var(--mascot-bg, #F6F1E7); stroke-width: 2.7px; }
+.barba-m .eye-socket, .barba-m .eye-glint, .barba-m .eye-pupil, .barba-m .lid { fill: var(--mascot-bg, #F6F1E7); }
+/* светлая тема: чёрная точка с бликом. Тёмная: кремовая точка с зрачком цвета фона,
+   иначе кремовый глаз в тёмной лунке читается как пустой белок */
+.barba-m .eye-pupil { display: none; }
+.barba-m.is-dark .eye-pupil { display: inline; }
+.barba-m.is-dark .eye-glint { display: none; }
+.barba-m .fx-amber { fill: var(--mascot-amber, #E8B54D); }
+.barba-m .fx-amber-d { fill: var(--mascot-amber-dark, #C98F2B); }
+.barba-m .fx-dot { fill: var(--mascot-amber-dark, #C98F2B); }
+.barba-m .fx-stroke { fill: none; stroke: var(--mascot-terra, #D9603B); stroke-width: 1.25px; stroke-linecap: round; }
+.barba-m .fx-line { fill: none; stroke: var(--mascot-amber-dark, #C98F2B); stroke-width: 1.5px; stroke-linecap: round; }
+.barba-m .fx-bang .fx-line { stroke: currentColor; stroke-width: 1.6px; }
+.barba-m .fx-zed { fill: none; stroke: var(--mascot-amber-dark, #C98F2B); stroke-width: 1.7px; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ------------------------------------------------------------ сборка позы */
+
+/* взгляд (--bm-gx/--bm-gy) чуть поворачивает и сдвигает всю фигуру: «голова» идёт за глазами */
+.barba-m .m-rig {
+  transform: translate(calc(var(--bm-rx, 0px) + var(--bm-gx, 0) * 1.1px), calc(var(--bm-ry, 0px) + var(--bm-gy, 0) * .5px))
+             rotate(calc(var(--bm-rr, 0deg) + var(--bm-gx, 0) * 1.6deg)) scale(var(--bm-rs, 1));
+  transition: transform var(--barba-t-slow) var(--barba-ease);
+}
+.barba-m .m-stache {
+  transform: translateY(var(--bm-sy, 0px));
+  transition: transform var(--barba-t) var(--barba-ease);
+}
+.barba-m .m-left { transform: rotate(var(--bm-m-l, var(--bm-m, 0deg))); }
+.barba-m .m-right { transform: rotate(var(--bm-m-r, var(--bm-m, 0deg))); }
+.barba-m .m-half-g { transition: transform var(--barba-t-slow) var(--barba-ease); }
+
+.barba-m .tip-l { transform: rotate(var(--bm-t-l, var(--bm-t, 0deg))) scale(var(--bm-ts-l, var(--bm-ts, 1))); }
+.barba-m .tip-r { transform: rotate(var(--bm-t-r, var(--bm-t, 0deg))) scale(var(--bm-ts-r, var(--bm-ts, 1))); }
+.barba-m .tip { transition: transform var(--barba-t-slow) var(--barba-ease); }
+.barba-m .tip-l .tip-curl { transform: scale(var(--bm-curl-l, var(--bm-curl, 1))); }
+.barba-m .tip-r .tip-curl { transform: scale(var(--bm-curl-r, var(--bm-curl, 1))); }
+.barba-m .tip-l .tip-point { transform: scale(var(--bm-point-l, var(--bm-point, 0))); }
+.barba-m .tip-r .tip-point { transform: scale(var(--bm-point-r, var(--bm-point, 0))); }
+.barba-m .tip-l .tip-droop { transform: scale(var(--bm-droop-l, var(--bm-droop, 0))); }
+.barba-m .tip-r .tip-droop { transform: scale(var(--bm-droop-r, var(--bm-droop, 0))); }
+.barba-m .tip-curl, .barba-m .tip-point, .barba-m .tip-droop {
+  transition: transform var(--barba-t) var(--barba-ease-out);
+}
+
+/* глаз целиком: поза */
+.barba-m .eye { transition: transform var(--barba-t) var(--barba-ease); }
+.barba-m .eye-l {
+  transform: translate(var(--bm-ex-l, var(--bm-ex, 0px)), var(--bm-ey-l, var(--bm-ey, 0px)))
+             scale(var(--bm-es-l, var(--bm-es, 1)));
+}
+.barba-m .eye-r {
+  transform: translate(calc(-1 * var(--bm-ex-r, var(--bm-ex, 0px))), var(--bm-ey-r, var(--bm-ey, 0px)))
+             scale(var(--bm-es-r, var(--bm-es, 1)));
+}
+/* взгляд, шаг 1: лунка чуть едет вдоль кромки, по вертикали почти стоит */
+.barba-m .eye-look { transition: transform 240ms var(--barba-ease-out); }
+.barba-m .eye-l .eye-look { transform: translate(calc(var(--bm-gx, 0) * 1.4px), calc(var(--bm-gy, 0) * .3px)); }
+.barba-m .eye-r .eye-look { transform: translate(calc(var(--bm-gx, 0) * -1.4px), calc(var(--bm-gy, 0) * .3px)); }
+/* взгляд, шаг 2: точка ходит внутри лунки (поза --bm-px/--bm-py + look). Уходит вверх —
+   снизу открывается серп лунки, и взгляд читается без белков. --bm-psy сплющивает точку
+   от её верхнего края (origin на макушке точки) */
+.barba-m .eye-ball { transform-origin: 0 -3.95px; transition: transform 260ms var(--barba-ease-out); }
+.barba-m .eye-l .eye-ball {
+  transform: translate(calc(var(--bm-px-l, var(--bm-px, 0px)) + var(--bm-gx, 0) * 1.1px),
+                       calc(var(--bm-py-l, var(--bm-py, 0px)) + var(--bm-gy, 0) * 1px))
+             scaleY(var(--bm-psy, 1));
+}
+.barba-m .eye-r .eye-ball {
+  transform: translate(calc(-1 * var(--bm-px-r, var(--bm-px, 0px)) - var(--bm-gx, 0) * 1.1px),
+                       calc(var(--bm-py-r, var(--bm-py, 0px)) + var(--bm-gy, 0) * 1px))
+             scaleY(var(--bm-psy, 1));
+}
+/* тёмная тема: зрачок ещё немного дальше в сторону взгляда (не выходя за точку); --bm-pr — его масштаб */
+.barba-m .eye-pupil { transition: transform 260ms var(--barba-ease-out); }
+.barba-m .eye-l .eye-pupil {
+  transform: translate(calc(var(--bm-px-l, var(--bm-px, 0px)) * .4 + var(--bm-gx, 0) * .45px),
+                       calc(var(--bm-py-l, var(--bm-py, 0px)) * .4 + var(--bm-gy, 0) * .45px))
+             scale(var(--bm-pr, 1));
+}
+.barba-m .eye-r .eye-pupil {
+  transform: translate(calc(var(--bm-px-r, var(--bm-px, 0px)) * -.4 - var(--bm-gx, 0) * .45px),
+                       calc(var(--bm-py-r, var(--bm-py, 0px)) * .4 + var(--bm-gy, 0) * .45px))
+             scale(var(--bm-pr, 1));
+}
+
+/* Смена формы глаза (точка ↔ ^ ↔ ‿) — через моргание, без растворения. Уходящая форма
+   схлопывается по вертикали за --barba-t-shut, прозрачность переключается скачком ровно
+   в момент, когда глаз закрыт, новая форма раскрывается из нуля. Ни в одном кадре нет
+   полупрозрачного глаза: ореол и лунка цвета фона на полупрозрачности дали бы серое кольцо.
+   --bm-in (0 или 1) — видна ли форма; уходящая (0) закрывается сразу, входящая (1) ждёт. */
+.barba-m .eye-open, .barba-m .eye-happy, .barba-m .eye-sleep {
+  --bm-in: 0;
+  opacity: var(--bm-in);
+  transform: scaleY(var(--bm-in));
+  transform-origin: 0 .8px;
+  transition:
+    transform calc(var(--barba-t-shut) + var(--bm-in) * (var(--barba-t-open) - var(--barba-t-shut)))
+              cubic-bezier(.45, 0, .25, 1) calc(var(--bm-in) * var(--barba-t-shut)),
+    opacity 0s linear var(--barba-t-shut);
+}
+.barba-m .eye-l .eye-open { --bm-in: var(--bm-open-l, var(--bm-open, 1)); }
+.barba-m .eye-r .eye-open { --bm-in: var(--bm-open-r, var(--bm-open, 1)); }
+.barba-m .eye-l .eye-happy { --bm-in: var(--bm-happy-l, var(--bm-happy, 0)); }
+.barba-m .eye-r .eye-happy { --bm-in: var(--bm-happy-r, var(--bm-happy, 0)); }
+.barba-m .eye-l .eye-sleep { --bm-in: var(--bm-sleep-l, var(--bm-sleep, 0)); }
+.barba-m .eye-r .eye-sleep { --bm-in: var(--bm-sleep-r, var(--bm-sleep, 0)); }
+
+/* блик едет вместе с точкой; вниз, когда веко опускается ниже его макушки */
+.barba-m .eye-glint { transition: transform var(--barba-t) var(--barba-ease-out); }
+.barba-m .eye-l .eye-glint {
+  transform: translateY(max(0px, calc((var(--bm-lid-l, var(--bm-lid, -6px)) - var(--bm-py-l, var(--bm-py, 0px)) + 2.9px)
+                                      * var(--bm-lido-l, var(--bm-lido, 0)))));
+}
+.barba-m .eye-r .eye-glint {
+  transform: translateY(max(0px, calc((var(--bm-lid-r, var(--bm-lid, -6px)) - var(--bm-py-r, var(--bm-py, 0px)) + 2.9px)
+                                      * var(--bm-lido-r, var(--bm-lido, 0)))));
+}
+
+/* Веко цвета фона. Видимость переключается скачком, без полупрозрачности: появляется
+   сразу (задержка 0) высоко над точкой и съезжает вниз, а исчезает, только когда
+   уехало вверх (задержка = время перехода). Взгляд вверх приподнимает веко, вниз — опускает. */
+.barba-m .lid-l {
+  --bm-lo: var(--bm-lido-l, var(--bm-lido, 0));
+  transform: translateY(calc(var(--bm-lid-l, var(--bm-lid, -6px)) + var(--bm-gy, 0) * 1.2px))
+             rotate(var(--bm-lida-l, var(--bm-lida, 0deg)));
+}
+.barba-m .lid-r {
+  --bm-lo: var(--bm-lido-r, var(--bm-lido, 0));
+  transform: translateY(calc(var(--bm-lid-r, var(--bm-lid, -6px)) + var(--bm-gy, 0) * 1.2px))
+             rotate(var(--bm-lida-r, var(--bm-lida, 0deg)));
+}
+.barba-m .lid {
+  opacity: var(--bm-lo);
+  transition: transform var(--barba-t) var(--barba-ease-out),
+              opacity 0s linear calc((1 - var(--bm-lo)) * var(--barba-t));
+}
+
+.barba-m .brow { transition: transform var(--barba-t) var(--barba-ease); }
+.barba-m .brow-l { transform: translate(var(--bm-bx-l, var(--bm-bx, 0px)), var(--bm-by-l, var(--bm-by, 0px))) rotate(var(--bm-ba-l, var(--bm-ba, 0deg))); }
+.barba-m .brow-r { transform: translate(var(--bm-bx-r, var(--bm-bx, 0px)), var(--bm-by-r, var(--bm-by, 0px))) rotate(var(--bm-ba-r, var(--bm-ba, 0deg))); }
+/* брови идут за глазами: вверх заметнее, чем вниз; бровь со стороны взгляда приподнимается */
+.barba-m .brow-look { transition: transform 260ms var(--barba-ease-out); }
+.barba-m .brow-l .brow-look {
+  transform: translate(calc(var(--bm-gx, 0) * 1.2px),
+                       calc(min(0px, var(--bm-gy, 0) * 1.7px) + max(0px, var(--bm-gy, 0) * .9px)
+                            - max(0px, calc(var(--bm-gx, 0) * -1.5px))));
+}
+.barba-m .brow-r .brow-look {
+  transform: translate(calc(var(--bm-gx, 0) * -1.2px),
+                       calc(min(0px, var(--bm-gy, 0) * 1.7px) + max(0px, var(--bm-gy, 0) * .9px)
+                            - max(0px, calc(var(--bm-gx, 0) * 1.5px))));
+}
+
+/* мелочи: скрыты, пока поза их не позовёт */
+.barba-m .fx {
+  opacity: 0;
+  transform: scale(.4);
+  transition: opacity var(--barba-t-fade) linear, transform var(--barba-t) var(--barba-ease);
+}
+.barba-m.is-thinking .fx-think,
+.barba-m.is-dozing .fx-zz,
+.barba-m.is-guilty .fx-blush,
+.barba-m.is-guilty .fx-drop,
+.barba-m.is-approve .fx-spark,
+.barba-m.is-surprised .fx-bang,
+.barba-m.is-point .fx-tipspark,
+.barba-m.is-wave .fx-waves { opacity: 1; transform: none; }
+/* румянец держится у глаза: едет вместе с ним (--bm-ex, --bm-ey) */
+.barba-m .fx-blush-at { transition: transform var(--barba-t) var(--barba-ease); }
+.barba-m .fx-blush-l { transform: translate(var(--bm-ex-l, var(--bm-ex, 0px)), var(--bm-ey-l, var(--bm-ey, 0px))); }
+.barba-m .fx-blush-r { transform: translate(var(--bm-ex-r, var(--bm-ex, 0px)), var(--bm-ey-r, var(--bm-ey, 0px))); }
+
+/* ------------------------------------------------------------ позы */
+
+.barba-m.is-calm {      /* уверенные усы: кончики подкручены, веко едва касается точки */
+  --bm-m: 2deg; --bm-t: 9deg; --bm-ts: .7;
+  --bm-lid: -3.75px; --bm-lido: 1;
+  --bm-ba-l: -1.5deg; --bm-ba-r: .5deg;   /* лёгкая асимметрия — чтобы не было «штампа» */
+}
+.barba-m.is-happy {
+  --bm-ry: -1px;
+  --bm-m: 6deg; --bm-t: 14deg; --bm-ts: 1;
+  --bm-open: 0; --bm-happy: 1; --bm-ey: -1.2px;
+  --bm-by: -2.4px; --bm-ba: -3deg;
+}
+.barba-m.is-approve {   /* подмигивает правым, улыбка на одну сторону */
+  --bm-rr: -3deg;
+  --bm-m-l: 2deg; --bm-m-r: 8deg;
+  --bm-t-l: 3deg; --bm-ts-l: .62; --bm-t-r: 20deg; --bm-ts-r: 1;
+  --bm-open-r: 0; --bm-happy-r: 1; --bm-ey-r: -1px;
+  --bm-px-l: .5px; --bm-py-l: -.3px;
+  --bm-by-l: -2.6px; --bm-ba-l: -5deg;
+  --bm-by-r: 1.2px; --bm-ba-r: 6deg;
+}
+.barba-m.is-surprised { /* подпрыгнул: глаза больше, брови вверх; ширину усов не трогаем */
+  --bm-ry: -2.6px; --bm-sy: 1.2px;
+  --bm-m: -3deg; --bm-t: 10deg; --bm-ts: .5;
+  --bm-es: 1.28; --bm-ey: -.6px; --bm-pr: .72;   /* в тёмной теме зрачки сужаются */
+  --bm-by: -5.2px; --bm-ba: -4deg;
+}
+.barba-m.is-surprised .m-rig { transition-timing-function: cubic-bezier(.3, 1.9, .55, 1); }
+.barba-m.is-thinking {  /* взгляд вбок-вверх, одна бровь вверх, наклон, крутит ус */
+  --bm-rr: 3deg;
+  --bm-m-l: 1deg; --bm-m-r: 3deg;
+  --bm-t-l: 2deg; --bm-ts-l: .6; --bm-t-r: 22deg; --bm-ts-r: .95;
+  --bm-ex: -.9px; --bm-ey: -.7px;
+  --bm-px: -1.15px; --bm-py-l: -1.05px; --bm-py-r: -.5px;
+  --bm-lid-r: -2.5px; --bm-lida-r: 6deg; --bm-lido-r: 1;
+  --bm-by-l: -3.6px; --bm-ba-l: -9deg;
+  --bm-by-r: .6px; --bm-ba-r: 5deg;
+}
+.barba-m.is-stern {     /* брови сведены, веки прикрыты — но кончики подкручены: спрятанная улыбка.
+                           Правая бровь мягче левой, веки почти ровные, голова чуть набок: «строг, но добр»,
+                           а не «подозревает» */
+  --bm-rr: 2.5deg;
+  --bm-m: 3deg; --bm-t: 15deg; --bm-ts: .96;
+  --bm-lid: -1.9px; --bm-lida: 5.5deg; --bm-lido: 1;
+  --bm-bx: .8px; --bm-by: 1.3px; --bm-ba-l: 11deg;
+  --bm-by-r: .5px; --bm-ba-r: 7deg;
+}
+.barba-m.is-guilty {    /* играют кончики: увяли и провисли от основания; половинки почти на месте */
+  --bm-ry: 1.2px; --bm-rr: -2deg;
+  --bm-m: -1deg; --bm-curl: 0; --bm-droop: 1; --bm-t: -8deg; --bm-ts: .96;
+  --bm-es: .92; --bm-ex: -.8px; --bm-ey: .9px;
+  --bm-px: -.6px; --bm-py: .55px;
+  --bm-lid: -2.6px; --bm-lida: -8deg; --bm-lido: 1;
+  --bm-bx: .5px; --bm-by: -1.4px; --bm-ba: -15deg;
+}
+.barba-m.is-dozing {
+  --bm-ry: 1.2px; --bm-rr: -6deg;
+  --bm-m: -2deg; --bm-t: -14deg; --bm-ts: .72;
+  --bm-open: 0; --bm-sleep: 1; --bm-ey: .8px;
+  --bm-by: 1.6px; --bm-ba: -3deg;
+  --bm-breath: 1.9;       /* дышит глубже */
+}
+.barba-m.is-lookup {    /* смотрит вверх на чёлку: лунки стоят в кромке, точки ушли к верху лунок
+                           и прижаты сверху — снизу открылся серп; брови приподняты с наклоном
+                           «удивления»; фигура тянется вверх, кончики-«пальцы» подняты (хорда ~37°) */
+  --bm-ry: -1px;
+  --bm-m: 5deg; --bm-curl: 0; --bm-point: 1; --bm-t: 17deg; --bm-ts: .74;
+  --bm-es: 1.06; --bm-ey: -.8px;
+  --bm-py: -1.35px; --bm-psy: .86;
+  --bm-by: -2px; --bm-ba: -6deg;
+}
+.barba-m.is-point {     /* правый кончик показывает вверх: конец «пальца» не круче ~57° */
+  --bm-rx: -2px; --bm-rr: -2deg;
+  --bm-m-l: 1deg; --bm-m-r: 6deg;
+  --bm-t-l: 3deg; --bm-ts-l: .6;
+  --bm-curl-r: 0; --bm-point-r: 1; --bm-t-r: 15deg; --bm-ts-r: 1;
+  --bm-ex: .8px; --bm-ey: -.6px;
+  --bm-px: 1.1px; --bm-py: -.95px;
+  --bm-by-l: -1.2px; --bm-by-r: -3.4px; --bm-ba-r: -6deg;
+}
+.barba-m.is-wave {      /* машет правым кончиком */
+  --bm-rx: -2px; --bm-rr: -3deg;
+  --bm-m-l: 3deg; --bm-m-r: 7deg;
+  --bm-t-l: 8deg; --bm-ts-l: .8;
+  --bm-curl-r: 0; --bm-point-r: 1; --bm-t-r: 7deg; --bm-ts-r: 1;
+  --bm-open: 0; --bm-happy: 1; --bm-ey: -1px;
+  --bm-by: -2.4px; --bm-ba: -4deg;
+}
+
+/* ------------------------------------------------------------ живость */
+
+/* Дыхание: одна бесконечная анимация во всех позах, только в режиме idle. Глубину задаёт
+   --bm-breath (в dozing 1,9), и она меняется плавно (@property), поэтому при входе в дрёму
+   и выходе из неё цикл не перезапускается и не прыгает */
+.barba-m.is-idle .m-breathe { animation: barba-breathe 5s ease-in-out infinite; }
+@keyframes barba-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(calc(var(--bm-breath) * -.45px)) scale(calc(1 + var(--bm-breath) * .008)); }
+}
+
+/* моргание: controller.blink() ставит .is-blinking на ~0.2 с */
+.barba-m .eye-blink { transform-origin: 0 .8px; }
+.barba-m.is-blinking .eye-blink { animation: barba-blink 190ms ease-in-out; }
+@keyframes barba-blink {
+  0%, 100% { transform: scaleY(1); }
+  40%, 60% { transform: scaleY(.08); }
+}
+
+/* подёргивание усов: controller.twitch() ставит .is-twitching на ~0.75 с */
+.barba-m.is-twitching .m-left > .m-tw { animation: barba-twitch 620ms ease-out; }
+.barba-m.is-twitching .m-right > .m-tw { animation: barba-twitch 620ms 50ms ease-out; }
+.barba-m.is-twitching .tip-tw { animation: barba-flick 620ms 40ms ease-out; }
+.barba-m.is-twitching .brow-shape { animation: barba-brow-lift 620ms ease-out; }
+@keyframes barba-twitch {
+  0%, 100% { transform: rotate(0); }
+  16% { transform: rotate(5deg); }
+  34% { transform: rotate(-1.5deg); }
+  54% { transform: rotate(3.5deg); }
+  76% { transform: rotate(-.5deg); }
+}
+@keyframes barba-flick {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(12deg); }
+  42% { transform: rotate(-3deg); }
+  62% { transform: rotate(7deg); }
+  82% { transform: rotate(0); }
+}
+@keyframes barba-brow-lift {
+  0%, 100% { transform: translateY(0); }
+  20%, 60% { transform: translateY(-1.1px); }
+}
+
+/* поза «машет»: кончик качается, пока поза активна. Цикл начинается и кончается в нуле,
+   поэтому вход в позу без скачка; при выходе контроллер доводит кончик до нуля (WAAPI) */
+.barba-m.is-wave .tip-r .tip-wave { animation: barba-wave 1.15s linear infinite; }
+@keyframes barba-wave {             /* хорда «пальца» ходит в пределах ~35–53° */
+  0% { transform: rotate(0); animation-timing-function: cubic-bezier(.33, .66, .66, 1); }
+  25% { transform: rotate(-10deg); animation-timing-function: cubic-bezier(.45, 0, .55, 1); }
+  75% { transform: rotate(8deg); animation-timing-function: cubic-bezier(.33, 0, .66, .34); }
+  100% { transform: rotate(0); }
+}
+
+/* Точки мысли и «z z»: анимация висит всегда, но стоит на паузе вне своей позы. Уходя из позы,
+   мелочь замирает там, где была, и гаснет вместе с .fx, без рывка; вернувшись, едет дальше */
+.barba-m.is-idle .fx-dot { animation: barba-dot 1.8s ease-in-out infinite paused; }
+.barba-m.is-idle .fx-dot2 { animation-delay: .2s; }
+.barba-m.is-idle .fx-dot3 { animation-delay: .4s; }
+.barba-m.is-idle.is-thinking .fx-dot { animation-play-state: running; }
+@keyframes barba-dot {
+  0%, 100% { transform: scale(1); }
+  30% { transform: scale(1.3); }
+}
+.barba-m.is-idle .fx-z { animation: barba-z 2.8s ease-in-out infinite paused; }
+.barba-m.is-idle .fx-z2 { animation-delay: .9s; }
+.barba-m.is-idle.is-dozing .fx-z { animation-play-state: running; }
+@keyframes barba-z {
+  0%, 100% { transform: translate(0, 0); opacity: 1; }
+  50% { transform: translate(.8px, -1.6px); opacity: .55; }
+}
+
+/* вне экрана (ставит контроллер через IntersectionObserver): бесконечные анимации на паузе */
+.barba-m.is-offscreen, .barba-m.is-offscreen * { animation-play-state: paused !important; }
+
+/* ------------------------------------------------------------ без движения */
+
+/* .barba-static на корне или любом предке: позы сразу, без переходов и анимаций
+   (снимки, печать, превью) */
+.barba-static .barba-m, .barba-static .barba-m *,
+.barba-m.barba-static, .barba-m.barba-static * {
+  transition: none !important;
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .barba-m, .barba-m * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
